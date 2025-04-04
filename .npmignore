@@ -1,0 +1,14 @@
+# Development files
+.git/
+.github/
+node_modules/
+.DS_Store
+.env
+.env.*
+*.log
+
+# Documentation
+docs/
+examples/
+test/
+tests/

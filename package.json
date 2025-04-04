@@ -1,0 +1,29 @@
+{
+  "name": "stripe-tax-api-mcp-server",
+  "version": "1.0.0",
+  "description": "An MCP server that interacts with Stripe Tax API to retrieve and write tax settings and calculations",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "npm run test:create && npm run test:retrieve && npm run test:lineitems",
+    "test:create": "node src/test-create-calculation.js",
+    "test:retrieve": "node src/test-retrieve-calculation.js",
+    "test:lineitems": "node src/test-list-calculation-lineitems.js",
+    "test:mcp": "node src/test-mcp-server.js"
+  },
+  "keywords": [
+    "mcp",
+    "stripe",
+    "tax",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "node-fetch": "^3.3.2",
+    "stripe": "^18.0.0",
+    "zod": "^3.22.4"
+  }
+}
