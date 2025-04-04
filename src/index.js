@@ -106,6 +106,26 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
   }
 }
 
+/**
+ * Retrieves tax registrations from Stripe
+ * @param {string} apiKey - The Stripe API key
+ * @param {Object} options - Additional options like limit, starting_after, etc.
+ * @returns {Object} The tax registrations
+ */
+async function listTaxRegistrations(apiKey, options = {}) {
+  try {
+    // Initialize Stripe with the provided API key
+    const stripe = new Stripe(apiKey);
+    
+    // Make the API call to retrieve the tax registrations
+    const registrations = await stripe.tax.registrations.list(options);
+    return registrations;
+  } catch (error) {
+    console.error("Error retrieving tax registrations:", error);
+    throw new Error(`Failed to retrieve tax registrations: ${error.message}`);
+  }
+}
+
 // Create an MCP server
 const server = new McpServer({
   name: "Stripe Tax API Manager",
@@ -260,6 +280,34 @@ server.tool("listTaxCalculationLineItems",
   }
 );
 
+// Add a tool to list tax registrations
+server.tool("listTaxRegistrations",
+  {
+    apiKey: z.string().describe("Your Stripe API key"),
+    limit: z.number().optional().describe("Maximum number of registrations to return"),
+    starting_after: z.string().optional().describe("Pagination cursor for continuing from a previous list"),
+    ending_before: z.string().optional().describe("Pagination cursor for returning results before this ID")
+  },
+  async ({ apiKey, limit, starting_after, ending_before }) => {
+    try {
+      const options = {};
+      if (limit !== undefined) options.limit = limit;
+      if (starting_after) options.starting_after = starting_after;
+      if (ending_before) options.ending_before = ending_before;
+      
+      const registrations = await listTaxRegistrations(apiKey, options);
+      return {
+        content: [{ type: "text", text: JSON.stringify(registrations, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
 // Add a resource that provides information about Stripe Tax
 server.resource(
   "stripe-tax-info",
@@ -284,6 +332,7 @@ server.resource(
         "- Tax Settings API: https://docs.stripe.com/api/tax/settings\n" +
         "- Tax Calculations API: https://docs.stripe.com/api/tax/calculations\n" +
         "- Tax Calculations Line Items API: https://docs.stripe.com/api/tax/calculation_line_items\n" +
+        "- Tax Registrations API: https://docs.stripe.com/api/tax/registrations\n" +
         "- API Authentication: https://docs.stripe.com/authentication"
     }]
   })
@@ -380,6 +429,24 @@ server.prompt(
       content: {
         type: "text",
         text: `List the line items for tax calculation with ID '${calculationId}'${limit ? ` (limit: ${limit})` : ''} using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+// Add a prompt for tax registrations retrieval
+server.prompt(
+  "list-tax-registrations",
+  { 
+    apiKey: z.string().describe("Your Stripe API key"),
+    limit: z.number().optional().describe("Maximum number of registrations to return")
+  },
+  ({ apiKey, limit }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `List all tax registrations for my Stripe account${limit ? ` (limit: ${limit})` : ''} using this API key: ${apiKey}`
       }
     }]
   })

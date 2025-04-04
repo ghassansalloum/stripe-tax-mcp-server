@@ -10,6 +10,7 @@
     "test:create": "node src/test-create-calculation.js",
     "test:retrieve": "node src/test-retrieve-calculation.js",
     "test:lineitems": "node src/test-list-calculation-lineitems.js",
+    "test:registrations": "node src/test-list-registrations.js",
     "test:mcp": "node src/test-mcp-server.js"
   },
   "keywords": [
