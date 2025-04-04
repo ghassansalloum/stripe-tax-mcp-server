@@ -5,16 +5,27 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import Stripe from 'stripe';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 /**
  * Retrieves tax settings from Stripe
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @returns {Object} The tax settings object
  */
 async function getTaxSettings(apiKey) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to retrieve tax settings
     const settings = await stripe.tax.settings.retrieve();
@@ -27,14 +38,21 @@ async function getTaxSettings(apiKey) {
 
 /**
  * Updates tax settings in Stripe
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @param {Object} settings - The tax settings to update
  * @returns {Object} The updated tax settings object
  */
 async function updateTaxSettings(apiKey, settings) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to update tax settings
     const updatedSettings = await stripe.tax.settings.update(settings);
@@ -47,14 +65,21 @@ async function updateTaxSettings(apiKey, settings) {
 
 /**
  * Creates a tax calculation in Stripe
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @param {Object} params - The parameters for the tax calculation
  * @returns {Object} The created tax calculation object
  */
 async function createTaxCalculation(apiKey, params) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to create the tax calculation
     const calculation = await stripe.tax.calculations.create(params);
@@ -67,14 +92,21 @@ async function createTaxCalculation(apiKey, params) {
 
 /**
  * Retrieves a tax calculation from Stripe by ID
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @param {string} calculationId - The ID of the tax calculation to retrieve
  * @returns {Object} The tax calculation object
  */
 async function retrieveTaxCalculation(apiKey, calculationId) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to retrieve the tax calculation
     const calculation = await stripe.tax.calculations.retrieve(calculationId);
@@ -87,15 +119,22 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
 
 /**
  * Retrieves line items for a tax calculation from Stripe
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @param {string} calculationId - The ID of the tax calculation to retrieve line items for
  * @param {Object} options - Additional options like limit, starting_after, etc.
  * @returns {Object} The tax calculation line items
  */
 async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to retrieve the tax calculation line items
     const lineItems = await stripe.tax.calculations.listLineItems(calculationId, options);
@@ -108,14 +147,21 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
 
 /**
  * Retrieves tax registrations from Stripe
- * @param {string} apiKey - The Stripe API key
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
  * @param {Object} options - Additional options like limit, starting_after, etc.
  * @returns {Object} The tax registrations
  */
 async function listTaxRegistrations(apiKey, options = {}) {
   try {
-    // Initialize Stripe with the provided API key
-    const stripe = new Stripe(apiKey);
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
     
     // Make the API call to retrieve the tax registrations
     const registrations = await stripe.tax.registrations.list(options);
@@ -134,7 +180,9 @@ const server = new McpServer({
 
 // Add a tool to retrieve tax settings
 server.tool("getTaxSettings",
-  { apiKey: z.string().describe("Your Stripe API key") },
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)") 
+  },
   async ({ apiKey }) => {
     try {
       const settings = await getTaxSettings(apiKey);
@@ -153,7 +201,7 @@ server.tool("getTaxSettings",
 // Add a tool to update tax settings
 server.tool("updateTaxSettings",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     settings: z.object({
       default_tax_jurisdiction: z.string().optional(),
       head_office: z.object({
@@ -189,7 +237,7 @@ server.tool("updateTaxSettings",
 // Add a tool to retrieve a tax calculation
 server.tool("retrieveTaxCalculation",
   {
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     calculationId: z.string().describe("The ID of the tax calculation to retrieve")
   },
   async ({ apiKey, calculationId }) => {
@@ -210,7 +258,7 @@ server.tool("retrieveTaxCalculation",
 // Add a tool to create a tax calculation
 server.tool("createTaxCalculation",
   {
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     params: z.object({
       currency: z.string().describe("The currency for the calculation (e.g., 'usd')"),
       customer_details: z.object({
@@ -254,7 +302,7 @@ server.tool("createTaxCalculation",
 // Add a tool to list tax calculation line items
 server.tool("listTaxCalculationLineItems",
   {
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     calculationId: z.string().describe("The ID of the tax calculation to retrieve line items for"),
     limit: z.number().optional().describe("Maximum number of line items to return"),
     starting_after: z.string().optional().describe("Pagination cursor for continuing from a previous list"),
@@ -283,7 +331,7 @@ server.tool("listTaxCalculationLineItems",
 // Add a tool to list tax registrations
 server.tool("listTaxRegistrations",
   {
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     limit: z.number().optional().describe("Maximum number of registrations to return"),
     starting_after: z.string().optional().describe("Pagination cursor for continuing from a previous list"),
     ending_before: z.string().optional().describe("Pagination cursor for returning results before this ID")
@@ -341,7 +389,7 @@ server.resource(
 // Add a prompt for tax settings retrieval
 server.prompt(
   "get-tax-settings",
-  { apiKey: z.string().describe("Your Stripe API key") },
+  { apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)") },
   ({ apiKey }) => ({
     messages: [{
       role: "user",
@@ -357,7 +405,7 @@ server.prompt(
 server.prompt(
   "update-tax-settings",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     country: z.string().describe("Default tax jurisdiction country code"),
     taxIdType: z.string().describe("Tax ID type (e.g., us_ein, eu_vat)"),
     taxIdValue: z.string().describe("Tax ID value")
@@ -381,7 +429,7 @@ Use this API key: ${apiKey}`
 server.prompt(
   "retrieve-tax-calculation",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     calculationId: z.string().describe("The ID of the tax calculation to retrieve")
   },
   ({ apiKey, calculationId }) => ({
@@ -399,7 +447,7 @@ server.prompt(
 server.prompt(
   "create-tax-calculation",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     currency: z.string().describe("The currency code (e.g., 'usd')"),
     country: z.string().describe("Customer's country code"),
     amount: z.number().describe("Amount in currency's smallest unit")
@@ -419,7 +467,7 @@ server.prompt(
 server.prompt(
   "list-tax-calculation-line-items",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     calculationId: z.string().describe("The ID of the tax calculation to retrieve line items for"),
     limit: z.number().optional().describe("Maximum number of line items to return")
   },
@@ -438,7 +486,7 @@ server.prompt(
 server.prompt(
   "list-tax-registrations",
   { 
-    apiKey: z.string().describe("Your Stripe API key"),
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
     limit: z.number().optional().describe("Maximum number of registrations to return")
   },
   ({ apiKey, limit }) => ({

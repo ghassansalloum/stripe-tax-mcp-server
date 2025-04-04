@@ -23,17 +23,28 @@ A Model Context Protocol (MCP) server that interacts with the Stripe Tax API to 
    npm install
    ```
 
-3. Start the server:
+3. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   
+4. Edit the `.env` file to add your Stripe API key:
+   ```
+   STRIPE_API_KEY=sk_test_your_test_key_here
+   ```
+
+5. Start the server:
    ```bash
    npm start
    ```
 
 ## Configuration Options
 
-The server requires no configuration files, but to use it effectively, you'll need:
+The server can be configured using environment variables:
 
 1. **Stripe API Key**:
-   - All operations require a valid Stripe API key
+   - Set your API key in the `.env` file as `STRIPE_API_KEY`
+   - Alternatively, you can provide the API key when calling each tool
    - For production use, use a restricted API key with only tax-related permissions
    - In development, you can use a test API key from Stripe's dashboard
 
@@ -48,9 +59,17 @@ This MCP server provides tools for interacting with Stripe Tax API for settings 
 Retrieves current tax settings from Stripe.
 
 **Parameters**:
-- `apiKey`: Your Stripe API key
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 
 **Example**:
+```json
+{
+  "name": "getTaxSettings",
+  "arguments": {}
+}
+```
+
+**Example with API key**:
 ```json
 {
   "name": "getTaxSettings",
@@ -88,13 +107,29 @@ Retrieves current tax settings from Stripe.
 Updates tax settings in Stripe.
 
 **Parameters**:
-- `apiKey`: Your Stripe API key
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 - `settings`: An object containing tax settings to update
   - `default_tax_jurisdiction`: Default country for tax calculation
   - `head_office`: Company address information
   - `tax_id`: Tax identification information
 
-**Example**:
+**Example using environment variable API key**:
+```json
+{
+  "name": "updateTaxSettings",
+  "arguments": {
+    "settings": {
+      "default_tax_jurisdiction": "CA",
+      "tax_id": {
+        "type": "ca_bn",
+        "value": "123456789"
+      }
+    }
+  }
+}
+```
+
+**Example with explicit API key**:
 ```json
 {
   "name": "updateTaxSettings",
@@ -116,10 +151,20 @@ Updates tax settings in Stripe.
 Retrieves a tax calculation from Stripe by its ID.
 
 **Parameters**:
-- `apiKey`: Your Stripe API key
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 - `calculationId`: The ID of the tax calculation to retrieve
 
-**Example**:
+**Example using environment variable API key**:
+```json
+{
+  "name": "retrieveTaxCalculation",
+  "arguments": {
+    "calculationId": "taxcalc_12345"
+  }
+}
+```
+
+**Example with explicit API key**:
 ```json
 {
   "name": "retrieveTaxCalculation",
@@ -176,13 +221,49 @@ Retrieves a tax calculation from Stripe by its ID.
 Creates a new tax calculation in Stripe.
 
 **Parameters**:
-- `apiKey`: Your Stripe API key
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 - `params`: Object containing parameters for the tax calculation:
   - `currency`: The currency for the calculation (e.g., 'usd')
   - `customer_details`: Customer information including address and optional tax IDs
   - `line_items`: Array of line items with amounts and optional tax codes
 
-**Example**:
+**Example using environment variable API key**:
+```json
+{
+  "name": "createTaxCalculation",
+  "arguments": {
+    "params": {
+      "currency": "usd",
+      "customer_details": {
+        "address": {
+          "country": "US",
+          "line1": "123 Main St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postal_code": "94105"
+        },
+        "address_source": "shipping",
+        "tax_ids": [
+          {
+            "type": "us_ein",
+            "value": "12-3456789"
+          }
+        ]
+      },
+      "line_items": [
+        {
+          "amount": 1000,
+          "reference": "product_123",
+          "tax_code": "txcd_30060006",
+          "tax_behavior": "exclusive"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Example with explicit API key**:
 ```json
 {
   "name": "createTaxCalculation",
@@ -269,13 +350,24 @@ Creates a new tax calculation in Stripe.
 Retrieves line items for a tax calculation from Stripe by its ID.
 
 **Parameters**:
-- `apiKey`: Your Stripe API key
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 - `calculationId`: The ID of the tax calculation to retrieve line items for
 - `limit` (optional): Maximum number of line items to return
 - `starting_after` (optional): Pagination cursor for continuing from a previous list
 - `ending_before` (optional): Pagination cursor for returning results before this ID
 
-**Example**:
+**Example using environment variable API key**:
+```json
+{
+  "name": "listTaxCalculationLineItems",
+  "arguments": {
+    "calculationId": "taxcalc_12345",
+    "limit": 3
+  }
+}
+```
+
+**Example with explicit API key**:
 ```json
 {
   "name": "listTaxCalculationLineItems",
@@ -381,6 +473,15 @@ The server offers the following prompts:
 - Check country codes are valid ISO codes (e.g., "US", "CA", "GB")
 - Verify tax ID types match the expected format for the given jurisdiction
 
+### API Key Issues
+
+**Problem**: "No API key provided" error message.
+
+**Solution**:
+- Make sure you've created an `.env` file with your `STRIPE_API_KEY` set
+- Or provide the API key directly when calling the methods
+- Verify the API key has permissions for Stripe Tax operations
+
 ### Connection Issues
 
 **Problem**: Unable to connect to the MCP server.
@@ -389,10 +490,12 @@ The server offers the following prompts:
 - Verify the server is running (check for console output)
 - Check that your client correctly implements the MCP protocol
 - Try using the MCP Inspector tool to debug the connection
+- Ensure the path in your `claude_desktop_config.json` is correct
 
 ## Security Considerations
 
 - **Never** hardcode your Stripe API key in your code
-- Use environment variables or a secure configuration system
+- Use environment variables via the `.env` file for storing your API key
 - In production, use restricted API keys with only the permissions needed
 - Consider implementing API key rotation for enhanced security
+- Add `.env` to your `.gitignore` file to prevent accidentally committing your API keys
