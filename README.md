@@ -63,7 +63,7 @@ The server can be configured using environment variables:
         "/<PATH_TO_YOUR_CLONED>/stripe-tax-mcp-server"
       ],
       "env": {
-        "STRIPE_API_KEY": "sk_test_51PWT2cKaxbmGncEi4MIZD9Ql11WqQj4BiuWG05DxupTVfN945amHT4zDNPtQpqvotCxrh186SKKIamtgngowdXlh00a2RKMlqW"
+        "STRIPE_API_KEY": "<YOUR_API_KEY>"
       }
     }
 ```
