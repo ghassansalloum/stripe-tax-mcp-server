@@ -3,7 +3,7 @@ Create an MCP server that retrieves and write  Tax Settings from the Stripe Tax 
 
 # Requirements
 1. Implement the MCP server. 
-2. Read the [README](./README.md) for reference to learn about MCP servers
+2. Read the [README OLD](./README\ OLD.md) for reference to learn about MCP servers
 3. Also read the [Documentation](./Documentation.md) to learn about MCP servers
 
 # Documentation
