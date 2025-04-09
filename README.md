@@ -1,504 +1,521 @@
-# MCP TypeScript SDK ![NPM Version](https://img.shields.io/npm/v/%40modelcontextprotocol%2Fsdk) ![MIT licensed](https://img.shields.io/npm/l/%40modelcontextprotocol%2Fsdk)
+# Stripe Tax API MCP Server
 
-## Table of Contents
-- [Overview](#overview)
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [What is MCP?](#what-is-mcp)
-- [Core Concepts](#core-concepts)
-  - [Server](#server)
-  - [Resources](#resources)
-  - [Tools](#tools)
-  - [Prompts](#prompts)
-- [Running Your Server](#running-your-server)
-  - [stdio](#stdio)
-  - [HTTP with SSE](#http-with-sse)
-  - [Testing and Debugging](#testing-and-debugging)
-- [Examples](#examples)
-  - [Echo Server](#echo-server)
-  - [SQLite Explorer](#sqlite-explorer)
-- [Advanced Usage](#advanced-usage)
-  - [Low-Level Server](#low-level-server)
-  - [Writing MCP Clients](#writing-mcp-clients)
-  - [Server Capabilities](#server-capabilities)
-
-## Overview
-
-The Model Context Protocol allows applications to provide context for LLMs in a standardized way, separating the concerns of providing context from the actual LLM interaction. This TypeScript SDK implements the full MCP specification, making it easy to:
-
-- Build MCP clients that can connect to any MCP server
-- Create MCP servers that expose resources, prompts and tools
-- Use standard transports like stdio and SSE
-- Handle all MCP protocol messages and lifecycle events
+A Model Context Protocol (MCP) server that interacts with the Stripe Tax API to retrieve and modify tax settings and calculations.
 
 ## Installation
 
-```bash
-npm install @modelcontextprotocol/sdk
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm (v6 or higher)
+- A Stripe account with API access
+
+### Installation Steps
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd stripe-tax-api-mcp-server
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+   (you may need to run `npm install @modelcontextprotocol/sdk` too)
+
+3. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   
+4. Edit the `.env` file to add your Stripe API key:
+   ```
+   STRIPE_API_KEY=sk_test_your_test_key_here
+   ```
+
+5. Start the server:
+   ```bash
+   npm start
+   ```
+
+## Configuration Options
+
+The server can be configured using environment variables:
+
+1. **Stripe API Key**:
+   - Set your API key in the `.env` file as `STRIPE_API_KEY`
+   - Alternatively, you can provide the API key when calling each tool
+   - For production use, use a restricted API key with only tax-related permissions
+   - In development, you can use a test API key from Stripe's dashboard
+
+
+
+### Special installation steps for Claude Desktop
+- Edit the claude_desktop_config.json file (Claude -> Settings -> Developer -> Edit Config)
+- Paste this: 
+``` json
+"stripe-tax": {
+      "command": "node",
+      "args": [
+        "/<PATH_TO_YOUR_CLONED>/stripe-tax-mcp-server"
+      ],
+      "env": {
+        "STRIPE_API_KEY": "sk_test_51PWT2cKaxbmGncEi4MIZD9Ql11WqQj4BiuWG05DxupTVfN945amHT4zDNPtQpqvotCxrh186SKKIamtgngowdXlh00a2RKMlqW"
+      }
+    }
 ```
 
-## Quick Start
+## Usage Examples
 
-Let's create a simple MCP server that exposes a calculator tool and some data:
+This MCP server provides tools for interacting with Stripe Tax API for settings and calculations.
 
-```typescript
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+### Tools
 
-// Create an MCP server
-const server = new McpServer({
-  name: "Demo",
-  version: "1.0.0"
-});
+#### 1. getTaxSettings
 
-// Add an addition tool
-server.tool("add",
-  { a: z.number(), b: z.number() },
-  async ({ a, b }) => ({
-    content: [{ type: "text", text: String(a + b) }]
-  })
-);
+Retrieves current tax settings from Stripe.
 
-// Add a dynamic greeting resource
-server.resource(
-  "greeting",
-  new ResourceTemplate("greeting://{name}", { list: undefined }),
-  async (uri, { name }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Hello, ${name}!`
-    }]
-  })
-);
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
 
-// Start receiving messages on stdin and sending messages on stdout
-const transport = new StdioServerTransport();
-await server.connect(transport);
+**Example**:
+```json
+{
+  "name": "getTaxSettings",
+  "arguments": {}
+}
 ```
 
-## What is MCP?
+**Example with API key**:
+```json
+{
+  "name": "getTaxSettings",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key"
+  }
+}
+```
 
-The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) lets you build servers that expose data and functionality to LLM applications in a secure, standardized way. Think of it like a web API, but specifically designed for LLM interactions. MCP servers can:
+**Response**:
+```json
+{
+  "default_tax_jurisdiction": "US",
+  "head_office": {
+    "address": {
+      "country": "US",
+      "line1": "123 Main St",
+      "city": "San Francisco",
+      "state": "CA",
+      "postal_code": "94105"
+    }
+  },
+  "tax_id": {
+    "type": "us_ein",
+    "value": "12-3456789"
+  },
+  "status": {
+    "active": true
+  }
+}
+```
 
-- Expose data through **Resources** (think of these sort of like GET endpoints; they are used to load information into the LLM's context)
-- Provide functionality through **Tools** (sort of like POST endpoints; they are used to execute code or otherwise produce a side effect)
-- Define interaction patterns through **Prompts** (reusable templates for LLM interactions)
-- And more!
+#### 2. updateTaxSettings
 
-## Core Concepts
+Updates tax settings in Stripe.
 
-### Server
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `settings`: An object containing tax settings to update
+  - `default_tax_jurisdiction`: Default country for tax calculation
+  - `head_office`: Company address information
+  - `tax_id`: Tax identification information
 
-The McpServer is your core interface to the MCP protocol. It handles connection management, protocol compliance, and message routing:
+**Example using environment variable API key**:
+```json
+{
+  "name": "updateTaxSettings",
+  "arguments": {
+    "settings": {
+      "default_tax_jurisdiction": "CA",
+      "tax_id": {
+        "type": "ca_bn",
+        "value": "123456789"
+      }
+    }
+  }
+}
+```
 
-```typescript
-const server = new McpServer({
-  name: "My App",
-  version: "1.0.0"
-});
+**Example with explicit API key**:
+```json
+{
+  "name": "updateTaxSettings",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "settings": {
+      "default_tax_jurisdiction": "CA",
+      "tax_id": {
+        "type": "ca_bn",
+        "value": "123456789"
+      }
+    }
+  }
+}
+```
+
+#### 3. retrieveTaxCalculation
+
+Retrieves a tax calculation from Stripe by its ID.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `calculationId`: The ID of the tax calculation to retrieve
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "retrieveTaxCalculation",
+  "arguments": {
+    "calculationId": "taxcalc_12345"
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "retrieveTaxCalculation",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "calculationId": "taxcalc_12345"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "id": "taxcalc_12345",
+  "object": "tax.calculation",
+  "amount_total": 1090,
+  "currency": "usd",
+  "customer_details": {
+    "address": {
+      "country": "US",
+      "line1": "123 Main St",
+      "city": "San Francisco",
+      "state": "CA",
+      "postal_code": "94105"
+    },
+    "address_source": "shipping",
+    "tax_ids": []
+  },
+  "line_items_subtotal_amount": 1000,
+  "shipping_cost_subtotal_amount": 0,
+  "tax_amount_exclusive": 90,
+  "tax_amount_inclusive": 0,
+  "tax_breakdown": [
+    {
+      "amount": 60,
+      "jurisdiction": "California",
+      "sourcing": "destination",
+      "tax_type": "sales_tax"
+    },
+    {
+      "amount": 30,
+      "jurisdiction": "San Francisco",
+      "sourcing": "destination", 
+      "tax_type": "local_tax"
+    }
+  ],
+  "tax_date": "2023-01-15",
+  "expires_at": 1673913600
+}
+```
+
+#### 4. createTaxCalculation
+
+Creates a new tax calculation in Stripe.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `params`: Object containing parameters for the tax calculation:
+  - `currency`: The currency for the calculation (e.g., 'usd')
+  - `customer_details`: Customer information including address and optional tax IDs
+  - `line_items`: Array of line items with amounts and optional tax codes
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "createTaxCalculation",
+  "arguments": {
+    "params": {
+      "currency": "usd",
+      "customer_details": {
+        "address": {
+          "country": "US",
+          "line1": "123 Main St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postal_code": "94105"
+        },
+        "address_source": "shipping",
+        "tax_ids": [
+          {
+            "type": "us_ein",
+            "value": "12-3456789"
+          }
+        ]
+      },
+      "line_items": [
+        {
+          "amount": 1000,
+          "reference": "product_123",
+          "tax_code": "txcd_30060006",
+          "tax_behavior": "exclusive"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "createTaxCalculation",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "params": {
+      "currency": "usd",
+      "customer_details": {
+        "address": {
+          "country": "US",
+          "line1": "123 Main St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postal_code": "94105"
+        },
+        "address_source": "shipping",
+        "tax_ids": [
+          {
+            "type": "us_ein",
+            "value": "12-3456789"
+          }
+        ]
+      },
+      "line_items": [
+        {
+          "amount": 1000,
+          "reference": "product_123",
+          "tax_code": "txcd_30060006",
+          "tax_behavior": "exclusive"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "id": "taxcalc_12345",
+  "object": "tax.calculation",
+  "amount_total": 1090,
+  "currency": "usd",
+  "customer_details": {
+    "address": {
+      "country": "US",
+      "line1": "123 Main St",
+      "city": "San Francisco",
+      "state": "CA",
+      "postal_code": "94105"
+    },
+    "tax_ids": [
+      {
+        "type": "us_ein",
+        "value": "12-3456789"
+      }
+    ]
+  },
+  "line_items_subtotal_amount": 1000,
+  "shipping_cost_subtotal_amount": 0,
+  "tax_amount_exclusive": 90,
+  "tax_amount_inclusive": 0,
+  "tax_breakdown": [
+    {
+      "amount": 60,
+      "jurisdiction": "California",
+      "sourcing": "destination",
+      "tax_type": "sales_tax"
+    },
+    {
+      "amount": 30,
+      "jurisdiction": "San Francisco",
+      "sourcing": "destination", 
+      "tax_type": "local_tax"
+    }
+  ],
+  "tax_date": "2023-01-15",
+  "expires_at": 1673913600
+}
+```
+
+#### 5. listTaxCalculationLineItems
+
+Retrieves line items for a tax calculation from Stripe by its ID.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `calculationId`: The ID of the tax calculation to retrieve line items for
+- `limit` (optional): Maximum number of line items to return
+- `starting_after` (optional): Pagination cursor for continuing from a previous list
+- `ending_before` (optional): Pagination cursor for returning results before this ID
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "listTaxCalculationLineItems",
+  "arguments": {
+    "calculationId": "taxcalc_12345",
+    "limit": 3
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "listTaxCalculationLineItems",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "calculationId": "taxcalc_12345",
+    "limit": 3
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "object": "list",
+  "url": "/v1/tax/calculations/taxcalc_12345/line_items",
+  "has_more": false,
+  "data": [
+    {
+      "id": "li_1NpJD42eZvKYlo2CxyzABC",
+      "object": "tax.calculation_line_item",
+      "amount": 1000,
+      "amount_tax": 100,
+      "livemode": false,
+      "product": "prod_12345",
+      "quantity": 1,
+      "reference": "product_123",
+      "tax_behavior": "exclusive",
+      "tax_breakdown": [
+        {
+          "amount": 70,
+          "jurisdiction": "California",
+          "sourcing": "destination",
+          "tax_rate_details": {
+            "percentage_decimal": "0.07",
+            "tax_type": "sales_tax"
+          },
+          "taxability_reason": "standard",
+          "taxable_amount": 1000
+        },
+        {
+          "amount": 30,
+          "jurisdiction": "San Francisco",
+          "sourcing": "destination",
+          "tax_rate_details": {
+            "percentage_decimal": "0.03",
+            "tax_type": "local_tax"
+          },
+          "taxability_reason": "standard",
+          "taxable_amount": 1000
+        }
+      ],
+      "tax_code": "txcd_30060006",
+      "taxable_amount": 1000
+    }
+  ]
+}
 ```
 
 ### Resources
 
-Resources are how you expose data to LLMs. They're similar to GET endpoints in a REST API - they provide data but shouldn't perform significant computation or have side effects:
+The server provides the following resources:
 
-```typescript
-// Static resource
-server.resource(
-  "config",
-  "config://app",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: "App configuration here"
-    }]
-  })
-);
-
-// Dynamic resource with parameters
-server.resource(
-  "user-profile",
-  new ResourceTemplate("users://{userId}/profile", { list: undefined }),
-  async (uri, { userId }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Profile data for user ${userId}`
-    }]
-  })
-);
-```
-
-### Tools
-
-Tools let LLMs take actions through your server. Unlike resources, tools are expected to perform computation and have side effects:
-
-```typescript
-// Simple tool with parameters
-server.tool(
-  "calculate-bmi",
-  {
-    weightKg: z.number(),
-    heightM: z.number()
-  },
-  async ({ weightKg, heightM }) => ({
-    content: [{
-      type: "text",
-      text: String(weightKg / (heightM * heightM))
-    }]
-  })
-);
-
-// Async tool with external API call
-server.tool(
-  "fetch-weather",
-  { city: z.string() },
-  async ({ city }) => {
-    const response = await fetch(`https://api.weather.com/${city}`);
-    const data = await response.text();
-    return {
-      content: [{ type: "text", text: data }]
-    };
-  }
-);
-```
+1. `stripe-tax://info`: General information about Stripe Tax
+2. `stripe-tax://documentation`: References to Stripe Tax documentation
 
 ### Prompts
 
-Prompts are reusable templates that help LLMs interact with your server effectively:
+The server offers the following prompts:
 
-```typescript
-server.prompt(
-  "review-code",
-  { code: z.string() },
-  ({ code }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please review this code:\n\n${code}`
-      }
-    }]
-  })
-);
-```
+1. `get-tax-settings`: A prompt for retrieving tax settings
+2. `update-tax-settings`: A prompt for updating tax settings
+3. `retrieve-tax-calculation`: A prompt for retrieving a tax calculation by ID
+4. `create-tax-calculation`: A prompt for creating a new tax calculation
+5. `list-tax-calculation-line-items`: A prompt for retrieving line items for a tax calculation by ID
 
-## Running Your Server
+## Common Troubleshooting
 
-MCP servers in TypeScript need to be connected to a transport to communicate with clients. How you start the server depends on the choice of transport:
+### API Authentication Issues
 
-### stdio
+**Problem**: Getting "Authentication failed" errors when using the tools.
 
-For command-line tools and direct integrations:
+**Solution**:
+- Make sure your API key is valid and properly formatted
+- Check if the API key has the required permissions
+- For restricted keys, ensure they have access to tax endpoints
 
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+### Rate Limiting
 
-const server = new McpServer({
-  name: "example-server",
-  version: "1.0.0"
-});
+**Problem**: API requests are being rejected with rate limit errors.
 
-// ... set up server resources, tools, and prompts ...
+**Solution**:
+- Implement exponential backoff for retry logic
+- Reduce the frequency of API calls
+- Consider upgrading your Stripe account if you need higher limits
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
+### Data Validation Errors
 
-### HTTP with SSE
+**Problem**: The server rejects your tax settings update.
 
-For remote servers, start a web server with a Server-Sent Events (SSE) endpoint, and a separate endpoint for the client to send its messages to:
+**Solution**:
+- Ensure all required fields are provided with the correct format
+- Check country codes are valid ISO codes (e.g., "US", "CA", "GB")
+- Verify tax ID types match the expected format for the given jurisdiction
 
-```typescript
-import express, { Request, Response } from "express";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+### API Key Issues
 
-const server = new McpServer({
-  name: "example-server",
-  version: "1.0.0"
-});
+**Problem**: "No API key provided" error message.
 
-// ... set up server resources, tools, and prompts ...
+**Solution**:
+- Make sure you've created an `.env` file with your `STRIPE_API_KEY` set
+- Or provide the API key directly when calling the methods
+- Verify the API key has permissions for Stripe Tax operations
 
-const app = express();
+### Connection Issues
 
-// to support multiple simultaneous connections we have a lookup object from
-// sessionId to transport
-const transports: {[sessionId: string]: SSEServerTransport} = {};
+**Problem**: Unable to connect to the MCP server.
 
-app.get("/sse", async (_: Request, res: Response) => {
-  const transport = new SSEServerTransport('/messages', res);
-  transports[transport.sessionId] = transport;
-  res.on("close", () => {
-    delete transports[transport.sessionId];
-  });
-  await server.connect(transport);
-});
+**Solution**:
+- Verify the server is running (check for console output)
+- Check that your client correctly implements the MCP protocol
+- Try using the MCP Inspector tool to debug the connection
+- Ensure the path in your `claude_desktop_config.json` is correct
 
-app.post("/messages", async (req: Request, res: Response) => {
-  const sessionId = req.query.sessionId as string;
-  const transport = transports[sessionId];
-  if (transport) {
-    await transport.handlePostMessage(req, res);
-  } else {
-    res.status(400).send('No transport found for sessionId');
-  }
-});
+## Security Considerations
 
-app.listen(3001);
-```
-
-### Testing and Debugging
-
-To test your server, you can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector). See its README for more information.
-
-## Examples
-
-### Echo Server
-
-A simple server demonstrating resources, tools, and prompts:
-
-```typescript
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-
-const server = new McpServer({
-  name: "Echo",
-  version: "1.0.0"
-});
-
-server.resource(
-  "echo",
-  new ResourceTemplate("echo://{message}", { list: undefined }),
-  async (uri, { message }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Resource echo: ${message}`
-    }]
-  })
-);
-
-server.tool(
-  "echo",
-  { message: z.string() },
-  async ({ message }) => ({
-    content: [{ type: "text", text: `Tool echo: ${message}` }]
-  })
-);
-
-server.prompt(
-  "echo",
-  { message: z.string() },
-  ({ message }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please process this message: ${message}`
-      }
-    }]
-  })
-);
-```
-
-### SQLite Explorer
-
-A more complex example showing database integration:
-
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import sqlite3 from "sqlite3";
-import { promisify } from "util";
-import { z } from "zod";
-
-const server = new McpServer({
-  name: "SQLite Explorer",
-  version: "1.0.0"
-});
-
-// Helper to create DB connection
-const getDb = () => {
-  const db = new sqlite3.Database("database.db");
-  return {
-    all: promisify<string, any[]>(db.all.bind(db)),
-    close: promisify(db.close.bind(db))
-  };
-};
-
-server.resource(
-  "schema",
-  "schema://main",
-  async (uri) => {
-    const db = getDb();
-    try {
-      const tables = await db.all(
-        "SELECT sql FROM sqlite_master WHERE type='table'"
-      );
-      return {
-        contents: [{
-          uri: uri.href,
-          text: tables.map((t: {sql: string}) => t.sql).join("\n")
-        }]
-      };
-    } finally {
-      await db.close();
-    }
-  }
-);
-
-server.tool(
-  "query",
-  { sql: z.string() },
-  async ({ sql }) => {
-    const db = getDb();
-    try {
-      const results = await db.all(sql);
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify(results, null, 2)
-        }]
-      };
-    } catch (err: unknown) {
-      const error = err as Error;
-      return {
-        content: [{
-          type: "text",
-          text: `Error: ${error.message}`
-        }],
-        isError: true
-      };
-    } finally {
-      await db.close();
-    }
-  }
-);
-```
-
-## Advanced Usage
-
-### Low-Level Server
-
-For more control, you can use the low-level Server class directly:
-
-```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema
-} from "@modelcontextprotocol/sdk/types.js";
-
-const server = new Server(
-  {
-    name: "example-server",
-    version: "1.0.0"
-  },
-  {
-    capabilities: {
-      prompts: {}
-    }
-  }
-);
-
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
-  return {
-    prompts: [{
-      name: "example-prompt",
-      description: "An example prompt template",
-      arguments: [{
-        name: "arg1",
-        description: "Example argument",
-        required: true
-      }]
-    }]
-  };
-});
-
-server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-  if (request.params.name !== "example-prompt") {
-    throw new Error("Unknown prompt");
-  }
-  return {
-    description: "Example prompt",
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: "Example prompt text"
-      }
-    }]
-  };
-});
-
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
-
-### Writing MCP Clients
-
-The SDK provides a high-level client interface:
-
-```typescript
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-
-const transport = new StdioClientTransport({
-  command: "node",
-  args: ["server.js"]
-});
-
-const client = new Client(
-  {
-    name: "example-client",
-    version: "1.0.0"
-  },
-  {
-    capabilities: {
-      prompts: {},
-      resources: {},
-      tools: {}
-    }
-  }
-);
-
-await client.connect(transport);
-
-// List prompts
-const prompts = await client.listPrompts();
-
-// Get a prompt
-const prompt = await client.getPrompt("example-prompt", {
-  arg1: "value"
-});
-
-// List resources
-const resources = await client.listResources();
-
-// Read a resource
-const resource = await client.readResource("file:///example.txt");
-
-// Call a tool
-const result = await client.callTool({
-  name: "example-tool",
-  arguments: {
-    arg1: "value"
-  }
-});
-```
-
-## Documentation
-
-- [Model Context Protocol documentation](https://modelcontextprotocol.io)
-- [MCP Specification](https://spec.modelcontextprotocol.io)
-- [Example Servers](https://github.com/modelcontextprotocol/servers)
-
-## Contributing
-
-Issues and pull requests are welcome on GitHub at https://github.com/modelcontextprotocol/typescript-sdk.
-
-## License
-
-This project is licensed under the MIT License—see the [LICENSE](LICENSE) file for details.
+- **Never** hardcode your Stripe API key in your code
+- Use environment variables via the `.env` file for storing your API key
+- In production, use restricted API keys with only the permissions needed
+- Consider implementing API key rotation for enhanced security
+- Add `.env` to your `.gitignore` file to prevent accidentally committing your API keys
