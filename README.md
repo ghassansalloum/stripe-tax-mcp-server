@@ -70,7 +70,7 @@ The server can be configured using environment variables:
 
 ## Usage Examples
 
-This MCP server provides tools for interacting with Stripe Tax API for settings and calculations.
+This MCP server provides tools for interacting with Stripe Tax API for settings, calculations, and product tax code associations.
 
 ### Tools
 
@@ -447,6 +447,101 @@ Retrieves line items for a tax calculation from Stripe by its ID.
 }
 ```
 
+#### 6. updateProductTaxCode
+
+Updates a product in Stripe to associate a tax code with it.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `productId`: The ID of the product to update
+- `taxCode`: The tax code to associate with the product (e.g., 'txcd_30060006')
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "updateProductTaxCode",
+  "arguments": {
+    "productId": "prod_123456",
+    "taxCode": "txcd_30060006"
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "updateProductTaxCode",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "productId": "prod_123456",
+    "taxCode": "txcd_30060006"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "id": "prod_123456",
+  "object": "product",
+  "active": true,
+  "created": 1681234567,
+  "description": "Premium Widget",
+  "images": [],
+  "tax_code": "txcd_30060006",
+  "name": "Widget Pro",
+  "updated": 1681234789
+}
+```
+
+#### 7. getProductTaxCode
+
+Retrieves a product from Stripe and its associated tax code.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `productId`: The ID of the product to retrieve
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "getProductTaxCode",
+  "arguments": {
+    "productId": "prod_123456"
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "getProductTaxCode",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "productId": "prod_123456"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "product": {
+    "id": "prod_123456",
+    "object": "product",
+    "active": true,
+    "created": 1681234567,
+    "description": "Premium Widget",
+    "images": [],
+    "tax_code": "txcd_30060006",
+    "name": "Widget Pro",
+    "updated": 1681234789
+  },
+  "tax_code": "txcd_30060006",
+  "has_tax_code": true
+}
+```
+
 ### Resources
 
 The server provides the following resources:
@@ -463,6 +558,8 @@ The server offers the following prompts:
 3. `retrieve-tax-calculation`: A prompt for retrieving a tax calculation by ID
 4. `create-tax-calculation`: A prompt for creating a new tax calculation
 5. `list-tax-calculation-line-items`: A prompt for retrieving line items for a tax calculation by ID
+6. `update-product-tax-code`: A prompt for updating a product with a tax code
+7. `get-product-tax-code`: A prompt for retrieving a product's tax code
 
 ## Common Troubleshooting
 

@@ -11,7 +11,9 @@
     "test:retrieve": "node src/test-retrieve-calculation.js",
     "test:lineitems": "node src/test-list-calculation-lineitems.js",
     "test:registrations": "node src/test-list-registrations.js",
-    "test:mcp": "node src/test-mcp-server.js"
+    "test:mcp": "node src/test-mcp-server.js",
+    "test:product-tax": "node src/test-update-product-tax-code.js",
+    "test:get-product-tax": "node src/test-get-product-tax-code.js"
   },
   "keywords": [
     "mcp",

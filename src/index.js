@@ -172,6 +172,75 @@ async function listTaxRegistrations(apiKey, options = {}) {
   }
 }
 
+/**
+ * Updates a product in Stripe to associate a tax code with it
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
+ * @param {string} productId - The ID of the product to update
+ * @param {string} taxCode - The tax code to associate with the product
+ * @returns {Object} The updated product object
+ */
+async function updateProductTaxCode(apiKey, productId, taxCode) {
+  try {
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
+    
+    // Make the API call to update the product with the tax code as a direct field
+    const updatedProduct = await stripe.products.update(productId, {
+      tax_code: taxCode
+    });
+    
+    return updatedProduct;
+  } catch (error) {
+    console.error("Error updating product tax code:", error);
+    throw new Error(`Failed to update product tax code: ${error.message}`);
+  }
+}
+
+/**
+ * Retrieves a product from Stripe and its associated tax code
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
+ * @param {string} productId - The ID of the product to retrieve
+ * @returns {Object} The product object with tax code info
+ */
+async function getProductTaxCode(apiKey, productId) {
+  try {
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
+    
+    // Make the API call to retrieve the product
+    const product = await stripe.products.retrieve(productId);
+    
+    // Extract the tax code from the product if it exists
+    const taxCode = product.tax_code;
+    
+    // Create a response object with the product and tax code info
+    const response = {
+      product: product,
+      tax_code: taxCode || null,
+      has_tax_code: !!taxCode
+    };
+    
+    return response;
+  } catch (error) {
+    console.error("Error retrieving product tax code:", error);
+    throw new Error(`Failed to retrieve product tax code: ${error.message}`);
+  }
+}
+
 // Create an MCP server
 const server = new McpServer({
   name: "Stripe Tax API Manager",
@@ -356,6 +425,49 @@ server.tool("listTaxRegistrations",
   }
 );
 
+// Add a tool to update a product with a tax code
+server.tool("updateProductTaxCode",
+  {
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    productId: z.string().describe("The ID of the product to update"),
+    taxCode: z.string().describe("The tax code to associate with the product (e.g., 'txcd_30060006')")
+  },
+  async ({ apiKey, productId, taxCode }) => {
+    try {
+      const updatedProduct = await updateProductTaxCode(apiKey, productId, taxCode);
+      return {
+        content: [{ type: "text", text: JSON.stringify(updatedProduct, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Add a tool to retrieve a product's tax code
+server.tool("getProductTaxCode",
+  {
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    productId: z.string().describe("The ID of the product to retrieve")
+  },
+  async ({ apiKey, productId }) => {
+    try {
+      const productInfo = await getProductTaxCode(apiKey, productId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(productInfo, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
 // Add a resource that provides information about Stripe Tax
 server.resource(
   "stripe-tax-info",
@@ -495,6 +607,43 @@ server.prompt(
       content: {
         type: "text",
         text: `List all tax registrations for my Stripe account${limit ? ` (limit: ${limit})` : ''} using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+// Add a prompt for updating product tax code
+server.prompt(
+  "update-product-tax-code",
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    productId: z.string().describe("The ID of the product to update"),
+    taxCode: z.string().describe("The tax code to associate with the product (e.g., 'txcd_30060006')")
+  },
+  ({ apiKey, productId, taxCode }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `Update the product with ID '${productId}' to use tax code '${taxCode}' using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+// Add a prompt for retrieving product tax code
+server.prompt(
+  "get-product-tax-code",
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    productId: z.string().describe("The ID of the product to retrieve")
+  },
+  ({ apiKey, productId }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `Retrieve the tax code associated with product ID '${productId}' using this API key: ${apiKey}`
       }
     }]
   })
