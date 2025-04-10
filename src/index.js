@@ -81,8 +81,10 @@ async function createTaxCalculation(apiKey, params) {
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to create the tax calculation
-    const calculation = await stripe.tax.calculations.create(params);
+    // Make the API call to create the tax calculation with expanded line_items.data.tax_breakdown
+    const calculation = await stripe.tax.calculations.create(params, {
+      expand: ['line_items.data.tax_breakdown']
+    });
     return calculation;
   } catch (error) {
     console.error("Error creating tax calculation:", error);
@@ -108,8 +110,10 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to retrieve the tax calculation
-    const calculation = await stripe.tax.calculations.retrieve(calculationId);
+    // Make the API call to retrieve the tax calculation with expanded line_items.data.tax_breakdown
+    const calculation = await stripe.tax.calculations.retrieve(calculationId, {
+      expand: ['line_items.data.tax_breakdown']
+    });
     return calculation;
   } catch (error) {
     console.error("Error retrieving tax calculation:", error);
@@ -493,6 +497,8 @@ server.resource(
         "- Tax Calculations API: https://docs.stripe.com/api/tax/calculations\n" +
         "- Tax Calculations Line Items API: https://docs.stripe.com/api/tax/calculation_line_items\n" +
         "- Tax Registrations API: https://docs.stripe.com/api/tax/registrations\n" +
+        "- Invoices API: https://docs.stripe.com/api/invoices\n" + 
+        "- Invoice Line Items API: https://docs.stripe.com/api/invoices/line_items\n" +
         "- API Authentication: https://docs.stripe.com/authentication"
     }]
   })
@@ -644,6 +650,226 @@ server.prompt(
       content: {
         type: "text",
         text: `Retrieve the tax code associated with product ID '${productId}' using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+/**
+ * Retrieves a list of invoices from Stripe
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
+ * @param {Object} options - Additional options like limit, customer, status, etc.
+ * @returns {Object} The list of invoices
+ */
+async function listInvoices(apiKey, options = {}) {
+  try {
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
+    
+    // Make the API call to retrieve invoices
+    const invoices = await stripe.invoices.list(options);
+    return invoices;
+  } catch (error) {
+    console.error("Error retrieving invoices:", error);
+    throw new Error(`Failed to retrieve invoices: ${error.message}`);
+  }
+}
+
+/**
+ * Retrieves a specific invoice from Stripe by ID
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
+ * @param {string} invoiceId - The ID of the invoice to retrieve
+ * @returns {Object} The invoice object
+ */
+async function retrieveInvoice(apiKey, invoiceId) {
+  try {
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
+    
+    // Make the API call to retrieve the invoice
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+    return invoice;
+  } catch (error) {
+    console.error("Error retrieving invoice:", error);
+    throw new Error(`Failed to retrieve invoice: ${error.message}`);
+  }
+}
+
+/**
+ * Retrieves line items for an invoice from Stripe
+ * @param {string} apiKey - The Stripe API key (optional, falls back to STRIPE_API_KEY env var)
+ * @param {string} invoiceId - The ID of the invoice to retrieve line items for
+ * @param {Object} options - Additional options like limit, starting_after, etc.
+ * @returns {Object} The invoice line items
+ */
+async function retrieveInvoiceLineItems(apiKey, invoiceId, options = {}) {
+  try {
+    // Use the provided API key or fall back to the environment variable
+    const stripeKey = apiKey || process.env.STRIPE_API_KEY;
+    
+    if (!stripeKey) {
+      throw new Error("No API key provided. Please set STRIPE_API_KEY in your environment or provide it as a parameter.");
+    }
+    
+    // Initialize Stripe with the API key
+    const stripe = new Stripe(stripeKey);
+    
+    // Make the API call to retrieve the invoice line items
+    const lineItems = await stripe.invoices.listLineItems(invoiceId, options);
+    return lineItems;
+  } catch (error) {
+    console.error("Error retrieving invoice line items:", error);
+    throw new Error(`Failed to retrieve invoice line items: ${error.message}`);
+  }
+}
+
+// Add a tool to list invoices
+server.tool("listInvoices",
+  {
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    limit: z.number().optional().describe("Maximum number of invoices to return"),
+    customer: z.string().optional().describe("Customer ID to filter by"),
+    status: z.enum(['draft', 'open', 'paid', 'uncollectible', 'void']).optional().describe("Status to filter by"),
+    starting_after: z.string().optional().describe("Pagination cursor for continuing from a previous list"),
+    ending_before: z.string().optional().describe("Pagination cursor for returning results before this ID")
+  },
+  async ({ apiKey, limit, customer, status, starting_after, ending_before }) => {
+    try {
+      const options = {};
+      if (limit !== undefined) options.limit = limit;
+      if (customer) options.customer = customer;
+      if (status) options.status = status;
+      if (starting_after) options.starting_after = starting_after;
+      if (ending_before) options.ending_before = ending_before;
+      
+      const invoices = await listInvoices(apiKey, options);
+      return {
+        content: [{ type: "text", text: JSON.stringify(invoices, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Add a tool to retrieve a specific invoice
+server.tool("retrieveInvoice",
+  {
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    invoiceId: z.string().describe("The ID of the invoice to retrieve")
+  },
+  async ({ apiKey, invoiceId }) => {
+    try {
+      const invoice = await retrieveInvoice(apiKey, invoiceId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(invoice, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Add a tool to list invoice line items
+server.tool("retrieveInvoiceLineItems",
+  {
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    invoiceId: z.string().describe("The ID of the invoice to retrieve line items for"),
+    limit: z.number().optional().describe("Maximum number of line items to return"),
+    starting_after: z.string().optional().describe("Pagination cursor for continuing from a previous list"),
+    ending_before: z.string().optional().describe("Pagination cursor for returning results before this ID")
+  },
+  async ({ apiKey, invoiceId, limit, starting_after, ending_before }) => {
+    try {
+      const options = {};
+      if (limit !== undefined) options.limit = limit;
+      if (starting_after) options.starting_after = starting_after;
+      if (ending_before) options.ending_before = ending_before;
+      
+      const lineItems = await retrieveInvoiceLineItems(apiKey, invoiceId, options);
+      return {
+        content: [{ type: "text", text: JSON.stringify(lineItems, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Error: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Add a prompt for invoice listing
+server.prompt(
+  "list-invoices",
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    limit: z.number().optional().describe("Maximum number of invoices to return"),
+    customer: z.string().optional().describe("Customer ID to filter by")
+  },
+  ({ apiKey, limit, customer }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `List invoices${customer ? ` for customer ${customer}` : ''}${limit ? ` (limit: ${limit})` : ''} using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+// Add a prompt for invoice retrieval
+server.prompt(
+  "retrieve-invoice",
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    invoiceId: z.string().describe("The ID of the invoice to retrieve")
+  },
+  ({ apiKey, invoiceId }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `Retrieve the invoice with ID '${invoiceId}' using this API key: ${apiKey}`
+      }
+    }]
+  })
+);
+
+// Add a prompt for invoice line items retrieval
+server.prompt(
+  "retrieve-invoice-line-items",
+  { 
+    apiKey: z.string().optional().describe("Your Stripe API key (optional if set in environment)"),
+    invoiceId: z.string().describe("The ID of the invoice to retrieve line items for"),
+    limit: z.number().optional().describe("Maximum number of line items to return")
+  },
+  ({ apiKey, invoiceId, limit }) => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: `List the line items for invoice with ID '${invoiceId}'${limit ? ` (limit: ${limit})` : ''} using this API key: ${apiKey}`
       }
     }]
   })

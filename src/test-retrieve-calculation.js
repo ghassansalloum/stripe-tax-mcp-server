@@ -25,8 +25,10 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
     
     console.log(`Attempting to retrieve tax calculation with ID: ${calculationId}`);
     
-    // Make the API call to retrieve the tax calculation
-    const calculation = await stripe.tax.calculations.retrieve(calculationId);
+    // Make the API call to retrieve the tax calculation with expanded line_items.data.tax_breakdown
+    const calculation = await stripe.tax.calculations.retrieve(calculationId, {
+      expand: ['line_items.data.tax_breakdown']
+    });
     return calculation;
   } catch (error) {
     console.error("Error retrieving tax calculation:", error);
@@ -65,6 +67,13 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
       console.log('✅ Test passed: All required properties are present');
     } else {
       console.log(`❌ Test failed: Missing required properties: ${missingProps.join(', ')}`);
+    }
+    
+    // Verify expanded line items tax breakdown is present
+    if (calculation.line_items?.data?.[0]?.tax_breakdown) {
+      console.log('✅ Test passed: Expanded line_items.data.tax_breakdown is present');
+    } else {
+      console.log('❌ Test failed: Expanded line_items.data.tax_breakdown is missing');
     }
     
     console.log('\nTest completed successfully.');

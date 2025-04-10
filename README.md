@@ -1,6 +1,6 @@
-# Stripe Tax API MCP Server
+# Stripe Tax and Invoices API MCP Server
 
-A Model Context Protocol (MCP) server that interacts with the Stripe Tax API to retrieve and modify tax settings and calculations.
+A Model Context Protocol (MCP) server that interacts with the Stripe Tax and Invoices API to retrieve and modify tax settings, calculations, and invoice data.
 
 ## Installation
 
@@ -542,12 +542,218 @@ Retrieves a product from Stripe and its associated tax code.
 }
 ```
 
+#### 8. listInvoices
+
+Retrieves a list of invoices from Stripe.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `limit` (optional): Maximum number of invoices to return
+- `customer` (optional): Customer ID to filter by
+- `status` (optional): Invoice status to filter by ('draft', 'open', 'paid', 'uncollectible', 'void')
+- `starting_after` (optional): Pagination cursor for continuing from a previous list
+- `ending_before` (optional): Pagination cursor for returning results before this ID
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "listInvoices",
+  "arguments": {
+    "limit": 5,
+    "customer": "cus_123456"
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "listInvoices",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "limit": 5,
+    "status": "paid"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "object": "list",
+  "url": "/v1/invoices",
+  "has_more": true,
+  "data": [
+    {
+      "id": "in_1234567890",
+      "object": "invoice",
+      "account_country": "US",
+      "account_name": "Your Company",
+      "amount_due": 10000,
+      "amount_paid": 10000,
+      "amount_remaining": 0,
+      "customer": "cus_123456",
+      "currency": "usd",
+      "status": "paid",
+      "total": 10000,
+      "subtotal": 9500,
+      "tax": 500
+    },
+    {
+      "id": "in_0987654321",
+      "object": "invoice",
+      "account_country": "US",
+      "account_name": "Your Company",
+      "amount_due": 5000,
+      "amount_paid": 5000,
+      "amount_remaining": 0,
+      "customer": "cus_123456",
+      "currency": "usd",
+      "status": "paid",
+      "total": 5000,
+      "subtotal": 4750,
+      "tax": 250
+    }
+  ]
+}
+```
+
+#### 9. retrieveInvoice
+
+Retrieves a specific invoice from Stripe by ID.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `invoiceId`: The ID of the invoice to retrieve
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "retrieveInvoice",
+  "arguments": {
+    "invoiceId": "in_1234567890"
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "retrieveInvoice",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "invoiceId": "in_1234567890"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "id": "in_1234567890",
+  "object": "invoice",
+  "account_country": "US",
+  "account_name": "Your Company",
+  "amount_due": 10000,
+  "amount_paid": 10000,
+  "amount_remaining": 0,
+  "customer": "cus_123456",
+  "currency": "usd",
+  "status": "paid",
+  "total": 10000,
+  "subtotal": 9500,
+  "tax": 500,
+  "lines": {
+    "object": "list",
+    "data": [
+      {
+        "id": "il_1234567890",
+        "object": "line_item",
+        "amount": 9500,
+        "currency": "usd",
+        "description": "Premium Plan",
+        "quantity": 1,
+        "tax_amounts": [
+          {
+            "amount": 500,
+            "inclusive": false,
+            "tax_rate": "txr_1234567890"
+          }
+        ]
+      }
+    ],
+    "has_more": false,
+    "url": "/v1/invoices/in_1234567890/lines"
+  }
+}
+```
+
+#### 10. retrieveInvoiceLineItems
+
+Retrieves line items for an invoice from Stripe.
+
+**Parameters**:
+- `apiKey` (optional): Your Stripe API key. If not provided, the API key from the environment variable will be used.
+- `invoiceId`: The ID of the invoice to retrieve line items for
+- `limit` (optional): Maximum number of line items to return
+- `starting_after` (optional): Pagination cursor for continuing from a previous list
+- `ending_before` (optional): Pagination cursor for returning results before this ID
+
+**Example using environment variable API key**:
+```json
+{
+  "name": "retrieveInvoiceLineItems",
+  "arguments": {
+    "invoiceId": "in_1234567890",
+    "limit": 10
+  }
+}
+```
+
+**Example with explicit API key**:
+```json
+{
+  "name": "retrieveInvoiceLineItems",
+  "arguments": {
+    "apiKey": "sk_test_your_stripe_key",
+    "invoiceId": "in_1234567890",
+    "limit": 10
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "object": "list",
+  "url": "/v1/invoices/in_1234567890/lines",
+  "has_more": false,
+  "data": [
+    {
+      "id": "il_1234567890",
+      "object": "line_item",
+      "amount": 9500,
+      "currency": "usd",
+      "description": "Premium Plan",
+      "quantity": 1,
+      "tax_amounts": [
+        {
+          "amount": 500,
+          "inclusive": false,
+          "tax_rate": "txr_1234567890"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### Resources
 
 The server provides the following resources:
 
 1. `stripe-tax://info`: General information about Stripe Tax
-2. `stripe-tax://documentation`: References to Stripe Tax documentation
+2. `stripe-tax://documentation`: References to Stripe Tax documentation and Stripe Invoices documentation
 
 ### Prompts
 
@@ -560,6 +766,9 @@ The server offers the following prompts:
 5. `list-tax-calculation-line-items`: A prompt for retrieving line items for a tax calculation by ID
 6. `update-product-tax-code`: A prompt for updating a product with a tax code
 7. `get-product-tax-code`: A prompt for retrieving a product's tax code
+8. `list-invoices`: A prompt for listing invoices with optional filters
+9. `retrieve-invoice`: A prompt for retrieving a specific invoice by ID
+10. `retrieve-invoice-line-items`: A prompt for retrieving line items for a specific invoice
 
 ## Common Troubleshooting
 

@@ -38,8 +38,10 @@ async function createTaxCalculation(apiKey, params) {
     console.log(`Attempting to create a tax calculation with the following parameters:`);
     console.log(JSON.stringify(params, null, 2));
     
-    // Make the API call to create the tax calculation
-    const calculation = await stripe.tax.calculations.create(params);
+    // Make the API call to create the tax calculation with expanded line_items.data.tax_breakdown
+    const calculation = await stripe.tax.calculations.create(params, {
+      expand: ['line_items.data.tax_breakdown']
+    });
     return calculation;
   } catch (error) {
     console.error("Error creating tax calculation:", error);
@@ -78,6 +80,13 @@ async function createTaxCalculation(apiKey, params) {
       console.log('✅ Test passed: All required properties are present');
     } else {
       console.log(`❌ Test failed: Missing required properties: ${missingProps.join(', ')}`);
+    }
+    
+    // Verify expanded line items tax breakdown is present
+    if (calculation.line_items?.data?.[0]?.tax_breakdown) {
+      console.log('✅ Test passed: Expanded line_items.data.tax_breakdown is present');
+    } else {
+      console.log('❌ Test failed: Expanded line_items.data.tax_breakdown is missing');
     }
     
     // Store the calculation ID for use in line items test
