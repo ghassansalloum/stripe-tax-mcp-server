@@ -26,9 +26,9 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
     
     console.log(`Attempting to retrieve line items for tax calculation ID: ${calculationId}`);
     
-    // Make the API call to retrieve the tax calculation line items with expanded tax_breakdown
-    const listOptions = { ...options, expand: ['data.tax_breakdown'] };
-    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, listOptions);
+    // Make the API call to retrieve the tax calculation line items
+    // Tax breakdown is automatically included
+    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, options);
     return lineItems;
   } catch (error) {
     console.error("Error retrieving tax calculation line items:", error);

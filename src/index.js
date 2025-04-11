@@ -81,10 +81,9 @@ async function createTaxCalculation(apiKey, params) {
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to create the tax calculation with expanded line_items.data.tax_breakdown
-    const calculation = await stripe.tax.calculations.create(params, {
-      expand: ['line_items.data.tax_breakdown']
-    });
+    // Make the API call to create the tax calculation
+    // Note: line_items is automatically included in the response
+    const calculation = await stripe.tax.calculations.create(params);
     return calculation;
   } catch (error) {
     console.error("Error creating tax calculation:", error);
@@ -110,10 +109,8 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to retrieve the tax calculation with expanded line_items.data.tax_breakdown
-    const calculation = await stripe.tax.calculations.retrieve(calculationId, {
-      expand: ['line_items.data.tax_breakdown']
-    });
+    // Make the API call to retrieve the tax calculation
+    const calculation = await stripe.tax.calculations.retrieve(calculationId);
     return calculation;
   } catch (error) {
     console.error("Error retrieving tax calculation:", error);
@@ -140,9 +137,9 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to retrieve the tax calculation line items with expanded tax_breakdown
-    const listOptions = { ...options, expand: ['data.tax_breakdown'] };
-    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, listOptions);
+    // Make the API call to retrieve the tax calculation line items
+    // Tax breakdown is automatically included in line items
+    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, options);
     return lineItems;
   } catch (error) {
     console.error("Error retrieving tax calculation line items:", error);
