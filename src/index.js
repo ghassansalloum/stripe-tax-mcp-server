@@ -82,7 +82,7 @@ async function createTaxCalculation(apiKey, params) {
     const stripe = new Stripe(stripeKey);
     
     // Make the API call to create the tax calculation with expanded line_items
-    const paramsWithExpand = { ...params, expand: ['line_items'] };
+    const paramsWithExpand = { ...params, expand: ['line_items.data.tax_breakdown'] };
     const calculation = await stripe.tax.calculations.create(paramsWithExpand);
     return calculation;
   } catch (error) {
@@ -110,7 +110,7 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
     const stripe = new Stripe(stripeKey);
     
     // Make the API call to retrieve the tax calculation with expanded line_items
-    const calculation = await stripe.tax.calculations.retrieve(calculationId, { expand: ['line_items'] });
+    const calculation = await stripe.tax.calculations.retrieve(calculationId, { expand: ['line_items.data.tax_breakdown'] });
     return calculation;
   } catch (error) {
     console.error("Error retrieving tax calculation:", error);
@@ -137,9 +137,9 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
     // Initialize Stripe with the API key
     const stripe = new Stripe(stripeKey);
     
-    // Make the API call to retrieve the tax calculation line items
-    // Tax breakdown is automatically included in line items
-    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, options);
+    // Make the API call to retrieve the tax calculation line items with expanded tax_breakdown
+    const optionsWithExpand = { ...options, expand: ['data.tax_breakdown'] };
+    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, optionsWithExpand);
     return lineItems;
   } catch (error) {
     console.error("Error retrieving tax calculation line items:", error);
