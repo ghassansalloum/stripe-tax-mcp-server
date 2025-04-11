@@ -26,8 +26,9 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
     
     console.log(`Attempting to retrieve line items for tax calculation ID: ${calculationId}`);
     
-    // Make the API call to retrieve the tax calculation line items
-    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, options);
+    // Make the API call to retrieve the tax calculation line items with expanded tax_breakdown
+    const listOptions = { ...options, expand: ['data.tax_breakdown'] };
+    const lineItems = await stripe.tax.calculations.listLineItems(calculationId, listOptions);
     return lineItems;
   } catch (error) {
     console.error("Error retrieving tax calculation line items:", error);
@@ -76,6 +77,21 @@ async function listTaxCalculationLineItems(apiKey, calculationId, options = {}) 
           console.log('✅ Test passed: All required line item properties are present');
         } else {
           console.log(`❌ Test failed: Missing required line item properties: ${missingItemProps.join(', ')}`);
+        }
+        
+        // Verify that tax_breakdown is expanded
+        if (Array.isArray(item.tax_breakdown) && item.tax_breakdown.length > 0) {
+          console.log('✅ Test passed: Line item tax_breakdown is expanded');
+          
+          // Check for tax rate details in the breakdown
+          const breakdown = item.tax_breakdown[0];
+          if (breakdown.tax_rate_details) {
+            console.log('✅ Test passed: Tax rate details are present in tax_breakdown');
+          } else {
+            console.log('❌ Test failed: Tax rate details missing in tax_breakdown');
+          }
+        } else {
+          console.log('❌ Test failed: Line item tax_breakdown is not expanded properly');
         }
       } else {
         console.log('⚠️ Warning: No line items found, unable to test line item properties');
