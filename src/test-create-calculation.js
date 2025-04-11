@@ -1,8 +1,8 @@
 // Test script for creating a tax calculation
 import Stripe from 'stripe';
 
-// Test data
-const apiKey = 'sk_test_51PWT2cKaxbmGncEinBnQ5lyb8Bri4Y3jJrwzceLwZJsfa3ckhu5nJtx8uUPgrv2sZ5gURfaqjs4y99ktyVgteD6N00BDso5koh';
+// Test data - replace with your own valid Stripe API key
+const apiKey = process.env.STRIPE_API_KEY || 'sk_test_your_test_key_here';
 const params = {
   currency: 'usd',
   customer_details: {

@@ -35,6 +35,8 @@ A Model Context Protocol (MCP) server that interacts with the Stripe Tax and Inv
    ```
    STRIPE_API_KEY=sk_test_your_test_key_here
    ```
+   
+   ⚠️ **Important**: The test API key included in the sample files has expired. You must provide your own valid API key from your Stripe account.
 
 5. Start the server:
    ```bash

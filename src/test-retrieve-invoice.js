@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Use API key from environment or provide a test key
-const apiKey = process.env.STRIPE_API_KEY || 'sk_test_51PWT2cKaxbmGncEinBnQ5lyb8Bri4Y3jJrwzceLwZJsfa3ckhu5nJtx8uUPgrv2sZ5gURfaqjs4y99ktyVgteD6N00BDso5koh';
+const apiKey = process.env.STRIPE_API_KEY || 'sk_test_your_test_key_here';
 // Replace with a valid invoice ID for your account
 const invoiceId = 'in_SAMPLE'; // This is a sample - you should replace with a real invoice ID
 
