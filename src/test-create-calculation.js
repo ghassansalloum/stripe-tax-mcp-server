@@ -39,9 +39,9 @@ async function createTaxCalculation(apiKey, params) {
     console.log(JSON.stringify(params, null, 2));
     
     // Make the API call to create the tax calculation with expanded line_items
-    const calculation = await stripe.tax.calculations.create(params, {
-      expand: ['line_items']
-    });
+    // In Stripe Node.js SDK, options need to be passed as part of the first parameter
+    const paramsWithExpand = { ...params, expand: ['line_items'] };
+    const calculation = await stripe.tax.calculations.create(paramsWithExpand);
     return calculation;
   } catch (error) {
     console.error("Error creating tax calculation:", error);
