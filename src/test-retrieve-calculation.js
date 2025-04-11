@@ -25,9 +25,10 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
     
     console.log(`Attempting to retrieve tax calculation with ID: ${calculationId}`);
     
-    // Make the API call to retrieve the tax calculation
-    // Tax breakdown is automatically included
-    const calculation = await stripe.tax.calculations.retrieve(calculationId);
+    // Make the API call to retrieve the tax calculation with expanded line_items
+    const calculation = await stripe.tax.calculations.retrieve(calculationId, {
+      expand: ['line_items']
+    });
     return calculation;
   } catch (error) {
     console.error("Error retrieving tax calculation:", error);
@@ -68,11 +69,26 @@ async function retrieveTaxCalculation(apiKey, calculationId) {
       console.log(`❌ Test failed: Missing required properties: ${missingProps.join(', ')}`);
     }
     
-    // Verify expanded line items tax breakdown is present
-    if (calculation.line_items?.data?.[0]?.tax_breakdown) {
-      console.log('✅ Test passed: Expanded line_items.data.tax_breakdown is present');
+    // Verify expanded line_items is present
+    if (calculation.line_items && calculation.line_items.object === 'list') {
+      console.log('✅ Test passed: Expanded line_items is present');
+      
+      // Check if data array exists
+      if (Array.isArray(calculation.line_items.data) && calculation.line_items.data.length > 0) {
+        console.log('✅ Test passed: line_items.data array is present and contains items');
+        
+        // Check if tax_breakdown is present in each line item
+        const firstItem = calculation.line_items.data[0];
+        if (Array.isArray(firstItem.tax_breakdown) && firstItem.tax_breakdown.length > 0) {
+          console.log('✅ Test passed: tax_breakdown is present in line items');
+        } else {
+          console.log('❌ Test failed: tax_breakdown is missing in line items');
+        }
+      } else {
+        console.log('❌ Test failed: line_items.data array is empty or missing');
+      }
     } else {
-      console.log('❌ Test failed: Expanded line_items.data.tax_breakdown is missing');
+      console.log('❌ Test failed: Expanded line_items is missing or invalid');
     }
     
     console.log('\nTest completed successfully.');
